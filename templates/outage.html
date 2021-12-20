@@ -1,0 +1,380 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Include Bootstrap CDN -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <!-- Include Moment.js CDN -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment.min.js"></script>
+    <!-- Include Bootstrap DateTimePicker CDN -->
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css"
+        rel="stylesheet">
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.js"></script>
+    <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">OutageTracker</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Tracker</a></li>
+                <li><a href="#">LogOut</a></li>
+            </ul>
+        </div>
+    </nav>
+    <section class="py-5">
+        <button type="button" class="btn btn-danger py-3 px-4" style="float:right; margin-right:10px;"
+            data-toggle="modal" data-target="#exampleModalCenter">Create New Outage</button>
+    </section>
+
+    <section class="py-5" style="margin-top:10px;margin-bottom:10px;padding:20px 20px 20px 20px;">
+        <div >
+            <table id="outage_table" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>S.No.</th>
+                        <th>Received From</th>
+                        <th>Application Name</th>
+                        <th>Outage Start</th>
+                        <th>Outage End</th>
+                        <th>Total Outage(min)/End Outage</th>
+                    </tr>
+                </thead>
+                <tbody id="outage_table_id">
+                    {% for item in outage %}
+                        <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td>{{item.received_from}}</td>
+                        <td>{{item.application_name}}</td>
+                        <td>{{item.outage_start_time}}</td>
+                        {% if item.outage_status == false %}
+                            <td>On-Going</td>
+                        {% else %}
+                            <td>{{item.outage_end_time}}</td>
+                        {% endif %}
+                        
+                        {% if item.outage_status %}
+                            <td>{{item.outage_time}}</td>
+                        {% else %} 
+                            <td><button class="btn btn-small btn-success" onclick="get_details({{item.id}})">Close Outage</button></td>
+                        {% endif %}       
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <section class="py-5">
+        <div id="chartContainer" style="height: 300px; width: 100%;">
+        </div>
+    </section>
+
+    <div class="modal fade" id="closetrackerModalCenter" tabindex="-1" role="dialog"
+        aria-labelledby="closetrackerModalCenter" aria-hidden="false" style="margin-top:2%">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close d-flex align-items-center justify-content-center"
+                        data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" class="ion-ios-close"></span>
+                    </button>
+                </div>
+                <div class="modal-body p-4 p-md-5">
+                    <div class="icon d-flex align-items-center justify-content-center">
+                        <span class="ion-ios-person"></span>
+                    </div>
+                    <h3 class="text-center mb-4">Close Outage Record</h3>
+                    <span style="display: none;" class="form_error api_error"></span>
+                    <input style="display: none;" id="close_pk">
+                    <form action="#" class="login-form">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="JGxTGamv3pTrdAWtvE9LaHWMbshgzbAOeLt9d0miJHgHAsyoYnLpcr94Rrm7IIYP">
+                        <div class="form-group">
+                            <label>Received From:</label><span id="update_received_from"></span>
+                        </div>
+                        <div class="form-group d-flex">
+                            <label>Application Name:</label><span id="update_application_from"></span>
+                        </div>
+                        <div class="form-group d-flex">
+                            <label>Outage Start Time:</label><span id="update_outage_start_time"></span>
+                        </div>
+                        <div class="form-group d-flex">
+                            <label>Outage Close Time</label>
+                            <input type="test" id="outage_close_time" class="form-control rounded-left" placeholder="dd-mm-yyyy hh:mm:ss">
+                            <span style="display: none;" class="form_error outage_close_time_error"><code> ****Please enter Valid Outage Close Time</code></span>
+                        </div>
+                        <div class="form-group">
+                            <p class="form-control btn btn-danger rounded submit px-3" id="close_task">Close Task</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog"
+        aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close d-flex align-items-center justify-content-center"
+                        data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" class="ion-ios-close"></span>
+                    </button>
+                </div>
+                <div class="modal-body p-4 p-md-5">
+                    <div class="icon d-flex align-items-center justify-content-center">
+                        <span class="ion-ios-person"></span>
+                    </div>
+                    <h3 class="text-center mb-4">Add New Outage Record</h3>
+                    <span style="display: none;" class="form_error api_error"></span>
+                    <form action="#" class="login-form">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="JGxTGamv3pTrdAWtvE9LaHWMbshgzbAOeLt9d0miJHgHAsyoYnLpcr94Rrm7IIYP">
+                        <div class="form-group">
+                            <label>Received From</label>
+                            <input type="text" id="received_from" class="form-control rounded-left" placeholder="Received From">
+                            <span style="display: none;" class="form_error received_from_error"><code> ****Please enter Valid Received From</code></span>
+                        </div>
+                        <div class="form-group d-flex">
+                            <label>Application Name</label>
+                            <input type="test" id="application_name" class="form-control rounded-left" placeholder="Application Name">
+                            <span style="display: none;" class="form_error application_name_error"><code> ****Please enter Valid Application Name</code></span>
+                        </div>
+                        <div class="form-group d-flex">
+                            <label>Outage Start Time</label>
+                            <input type="test" id="outage_start_time" class="form-control rounded-left" placeholder="dd-mm-yyyy hh:mm:ss">
+                            <span style="display: none;" class="form_error outage_start_time_error"><code> ****Please enter Valid Outage Start Time</code></span>
+                        </div>
+                        <div class="form-group">
+                            <p class="form-control btn btn-danger rounded submit px-3" id="add_new">Add Now</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function reload_datatable(jsondata){
+            $('#outage_table_id').html('')
+            $.each( jsondata, function( key, value ) {
+                        S_No = (key + 1)
+                        received_from = value.received_from
+                        application_name = value.application_name
+                        outage_start_time = value.outage_start_time
+                        if(value.outage_end_time == null){
+                            outage_end_time = ""
+                        }else{
+                            outage_end_time = value.outage_end_time
+                        }
+                        if(value.outage_status == true ){
+                            outage_status = value.outage_time
+                        }else{
+                            outage_status = '<button class="btn btn-small btn-success" onclick="get_details('+value.id+')">Close Outage</button>'
+                        }
+                        status = ""
+                        console.log(received_from)
+                        html_test = "<tr><td>"+S_No+"</td><td>"+received_from+"</td><td>"+application_name+"</td><td>"+outage_start_time+"</td><td>"+outage_end_time+"</td><td>"+outage_status+"</td></tr>"
+                        $('#outage_table_id').append(html_test)   
+                    });
+        }
+        
+        function get_details(pk){
+            $("update_received_from").html('')
+            $("update_received_from").html('')
+            $("update_outage_start_time").html('')
+            $("outage_close_time").html('')
+            $('.form_error').hide()
+            const url = "/addoutage/"+pk
+            payload = {'pk':pk}
+            console.log(payload)
+            $.ajax({
+                    type: "GET",
+                    url:url,
+                    dataType: "text",
+                    //data: JSON.stringify(payload),
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        Response = jQuery.parseJSON(data)
+                        console.log(Response)
+                        $("#close_pk").val(Response.id)
+                        $("#update_received_from").html(Response.received_from)
+                        $("#update_application_from").html(Response.application_name)
+                        $("#update_outage_start_time").html(Response.outage_start_time)
+                        $('#closetrackerModalCenter').modal('toggle');
+                        console.log(Response.received_from)
+                    },
+                    error: function (textStatus, errorThrown) {
+                        alert('Unable to Get Details.')
+                }
+            });
+        }
+
+        $("#close_task").click(function(){
+            $(".form_error").hide()
+            csrfmiddlewaretoken = $("input[name=csrfmiddlewaretoken]").val(); 
+            pk = $('#close_pk').val()
+            out_time = $('#outage_close_time').val()
+            var valid = true;
+            if(out_time == ""){
+                valid = false;
+                $(".outage_close_time_error").show();
+            }
+            payload = {
+                "pk":pk,
+                "outage_end_time":out_time
+            }
+            if(valid == true){
+                const url = "/addoutage/"+pk
+                $.ajax({
+                    type: "PUT",
+                    url:url,
+                    dataType: "text",
+                    data: JSON.stringify(payload),
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        Response = jQuery.parseJSON(data)
+                        console.log(Response)
+                        reload_datatable(Response)
+                        loadgraph(Response)
+                        $('#closetrackerModalCenter').modal('toggle');
+                   
+                    },
+                    error: function (textStatus, errorThrown) {
+                        Response = jQuery.parseJSON(textStatus.responseText).error
+                        $('.api_error').html("<code>"+Response+"</code>")
+                        $('.api_error').show()
+                }
+            
+            });
+            }
+        })
+        $("#add_new").click(function(){
+            $(".form_error").hide()
+            csrfmiddlewaretoken = $("input[name=csrfmiddlewaretoken]").val(); 
+            received_from = $('#received_from').val()
+            application_name = $('#application_name').val()
+            outage_start_time = $('#outage_start_time').val()
+            var valid = true;
+            if (received_from == ""){
+                valid = false;
+                $(".received_from_error").show();
+            }
+            if (application_name == ""){
+                valid = false;
+                $(".application_name_error").show();
+            }
+            if (outage_start_time == ""){
+                valid = false;
+                $(".outage_start_time_error").show();
+            }
+
+            if (valid == true){
+                const url = "/addoutage/"
+                payload = {
+                    "csrfmiddlewaretoken":csrfmiddlewaretoken,
+                    "received_from": received_from, 
+                    "application_name":application_name,
+                    "outage_start_time":outage_start_time
+                 }
+            $.ajax({
+                type: "POST",
+                url:url,
+                dataType: "text",
+                data: JSON.stringify(payload),
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    Response = jQuery.parseJSON(data)
+                    reload_datatable(Response)
+                    loadgraph(Response)
+                    $('#exampleModalCenter').modal('toggle');
+                   
+                },
+                error: function (textStatus, errorThrown) {
+                    Response = jQuery.parseJSON(textStatus.responseText).error
+                    $('.api_error').html("<code>"+Response+"</code>")
+                    $('.api_error').show()
+                }
+            
+            });
+            
+            }
+            
+        })
+    </script>
+    <script>
+        $(document).ready(function() {
+            $('#outage_table').DataTable();
+        });
+        window.onload = function () {
+            var chart = new CanvasJS.Chart("chartContainer",{
+                    title: {
+                        text: "Outage Tracker"
+                    },
+                    data: [
+                        {
+                            dataPoints: [
+                                    {% for item in outage %}
+                                    { x: {{forloop.counter}}, y: {{item.outage_time}}, label: "{{item.application_name}}" },
+                                
+                                    {% endfor %}
+                                
+                                ]
+                        }
+                        ]
+                });
+                chart.render();
+                };
+    </script>
+    <script>
+        $(function () {
+            $('#outage_start_time').datetimepicker({
+                format: 'YYYY-MM-DD HH:mm:ss'
+            });
+            $('#outage_close_time').datetimepicker({
+                format: 'YYYY-MM-DD hh:mm:ss'
+            });
+        });
+
+        
+        function loadgraph(value) {
+            graph_point = []
+            $.each( Response, function( key, value ){
+                if (value.outage_status == true){
+                    values = value.outage_time
+                }else{
+                    values = 1
+                }
+                sr_no = key + 1
+                labels = value.application_name
+                a = {x:sr_no, y: values, label: labels }
+                graph_point.push(a)
+            })
+            console.log(graph_point)
+            var chart = new CanvasJS.Chart("chartContainer",{
+                title: {
+                        text: "Outage Tracker"
+                    },
+                    data: [
+                            {
+                                dataPoints: graph_point
+                            }
+                        ]
+            
+            });
+            chart.render();
+        }
+    </script>
+</body>
+
+</html>
